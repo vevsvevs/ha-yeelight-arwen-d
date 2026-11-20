@@ -56,20 +56,27 @@ Neither bulb needs Yeelight LAN mode.
 
 | Model | Primary light | Other controls |
 |---|---|---|
-| [`yeelink.light.colorc`](https://home.miot-spec.com/spec?type=urn:miot-spec-v2:device:light:0000A001:yeelink-colorc:1:0000C814) | Power, brightness, RGB, white (2700–6500 K), transitions, Flow | Off-delay timer (0–120 min) |
-| [`yeelink.light.monob`](https://home.miot-spec.com/spec/yeelink.light.monob) | Power and brightness | Off-delay timer (0–120 min), Toggle and Brightness up/down buttons |
+| [`yeelink.light.colorc`](https://home.miot-spec.com/spec?type=urn:miot-spec-v2:device:light:0000A001:yeelink-colorc:1:0000C814) | Power, brightness, RGB, white (2700–6500 K), transitions, Flow | Toggle, Brightness up/down (10 percentage points), Color temperature up/down (500 K, switches to white) |
+| [`yeelink.light.monob`](https://home.miot-spec.com/spec/yeelink.light.monob) | Power and brightness | Toggle and Brightness up/down (MIoT actions) |
 
 For `yeelight_arwen_d.adjust`, Home Assistant computes the relative changes
 from the last reported GU10 state. `monob` has a fixed white temperature and
 its MIoT commands use the bulb's own timing.
 
-The off-delay timer runs on the bulb. For `colorc`, turn the bulb on before
-setting the timer. Set the delay to 0 to cancel it. The W1 bulbs expose
-power-on behavior and a button to save the current light as the startup preset
-under **Configuration**. The configuration switches require the corresponding
-firmware properties to be readable. To save the preset, switch the bulb on
-and disable **Remember last state**. Wi-Fi signal, IP address and last restart
-appear under **Diagnostic**.
+The **Off delay** (0–120 min) is under **Configuration** and runs on the bulb.
+For `colorc`, turn the bulb on before setting the timer. Set it to 0 to cancel.
+
+Both model-specific Mi Home plugins include startup settings through Yeelight
+commands over miIO. The published MIoT specifications omit these settings.
+**Remember last state** automatically saves the light settings. **Turn on after
+power loss** controls whether the bulb turns on when mains power returns.
+Each switch is available when the firmware reports its setting. **Save current
+light as default** stores the current light settings as a startup preset.
+Switch the bulb on and disable automatic saving before using it. Actual
+behavior after loss of mains power depends on the firmware and has yet to be
+verified on physical GU10 hardware for this integration.
+
+Wi-Fi signal, IP address and last restart appear under **Diagnostic**.
 
 The multicolor bulb implements Flow through the same `set_scene ["cf", …]`
 command used by its Mi Home plugin, carried over local miIO. It starts a

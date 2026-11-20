@@ -38,6 +38,7 @@ PROPS_CEILING3 = ("power", "bright", "ct", "nl_br", "active_mode", "trans_interv
 
 GU10_SETTINGS_PROPS = ("save_state", "init_power_opt")
 PROPS_COLORC = ("power", "bright", "ct", "rgb", "color_mode", "flowing", "hue", "sat", *GU10_SETTINGS_PROPS)
+COLORC_TRANSITION_MS = 500
 MONOB_LIGHT_SIID = 2
 MONOB_PROPERTIES = {"power": 1, "bright": 3, "off_delay": 7}
 
