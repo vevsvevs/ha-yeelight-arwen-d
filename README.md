@@ -59,6 +59,10 @@ Neither bulb needs Yeelight LAN mode.
 | [`yeelink.light.colorc`](https://home.miot-spec.com/spec?type=urn:miot-spec-v2:device:light:0000A001:yeelink-colorc:1:0000C814) | Power, brightness, RGB, white (2700–6500 K), transitions, Flow | Toggle, Brightness up/down (10 percentage points), Color temperature up/down (500 K, switches to white) |
 | [`yeelink.light.monob`](https://home.miot-spec.com/spec/yeelink.light.monob) | Power and brightness | Toggle and Brightness up/down (MIoT actions) |
 
+The main light takes the device name. Home Assistant registers new GU10
+buttons, including the startup preset button, as disabled by default.
+Enable individual buttons from the device's entity list.
+
 For `yeelight_arwen_d.adjust`, Home Assistant computes the relative changes
 from the last reported GU10 state. `monob` has a fixed white temperature and
 its MIoT commands use the bulb's own timing.
@@ -100,7 +104,7 @@ triggers:
 actions:
   - action: light.turn_on
     target:
-      entity_id: light.yeelight_gu10_w1_multicolor_primary_light
+      entity_id: light.yeelight_gu10_w1_multicolor
     data:
       effect: Flow
 ```

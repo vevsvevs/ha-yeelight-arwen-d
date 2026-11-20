@@ -252,7 +252,7 @@ class Ceiling3Light(MainLight):
 class GU10Light(ArwenLight):
     """Common state and relative adjustments for the GU10 bulbs."""
 
-    _attr_name = "Primary light"
+    _attr_name = None
 
     def __init__(self, coordinator: ArwenCoordinator) -> None:
         super().__init__(coordinator, "main")
