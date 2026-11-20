@@ -66,6 +66,8 @@ class ArwenButton(ArwenEntity, ButtonEntity):
 class MonobButton(ArwenEntity, ButtonEntity):
     """Expose a native MIoT action on the GU10 dimmable bulb."""
 
+    _attr_entity_registry_enabled_default = False
+
     def __init__(self, coordinator: ArwenCoordinator, key: str) -> None:
         super().__init__(coordinator, key)
         self._attr_name = BUTTONS[key][0]
@@ -77,6 +79,8 @@ class MonobButton(ArwenEntity, ButtonEntity):
 
 class ColorcButton(ArwenEntity, ButtonEntity):
     """Use the multicolor bulb's absolute controls for relative adjustments."""
+
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: ArwenCoordinator, key: str) -> None:
         super().__init__(coordinator, key)
@@ -115,6 +119,7 @@ class SaveDefaultLight(ArwenEntity, ButtonEntity):
 
     _attr_name = "Save current light as default"
     _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: ArwenCoordinator) -> None:
         super().__init__(coordinator, "save_default")
