@@ -12,7 +12,7 @@ from .const import CONF_DID, DOMAIN, MODEL_CEILING3
 from .coordinator import ArwenCoordinator
 from .miio import MiioClient, MiioError
 
-PLATFORMS = [Platform.BUTTON, Platform.LIGHT, Platform.NUMBER, Platform.SENSOR, Platform.SWITCH]
+PLATFORMS = [Platform.BUTTON, Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.SWITCH]
 
 type ArwenConfigEntry = ConfigEntry[ArwenCoordinator]
 

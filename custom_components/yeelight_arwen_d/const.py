@@ -36,7 +36,12 @@ PROPS = (
 # Properties of the ceiling3: white light and night light only. active_mode is 1 in night light.
 PROPS_CEILING3 = ("power", "bright", "ct", "nl_br", "active_mode", "trans_interval_dflt")
 
-STARTUP_PROPS = ("save_state", "init_power_opt")
+POWER_ON_PROPERTY = "init_power_opt"
+POWER_ON_SETTING = "cfg_init_power"
+STARTUP_PROPS = ("save_state", POWER_ON_PROPERTY)
+# Yeelight's legacy InitPowerOption enum. The Arwen selector requires a readable value.
+POWER_ON_OPTIONS = {"restore": "0", "on": "1", "off": "2"}
+POWER_ON_OPTION_BY_VALUE = {value: option for option, value in POWER_ON_OPTIONS.items()}
 PROPS_COLORC = ("power", "bright", "ct", "rgb", "color_mode", "flowing", "hue", "sat", *STARTUP_PROPS)
 TIMER_MAX_MINUTES = {MODEL_ARWEN_D: 60, MODEL_CEILING3: 60, MODEL_COLORC: 120, MODEL_MONOB: 120}
 COLORC_TRANSITION_MS = 500

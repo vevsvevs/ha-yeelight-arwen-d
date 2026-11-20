@@ -116,16 +116,26 @@
         "name": "Hintergrundbeleuchtung folgt dem Hauptlicht"
       },
       "remember_state": {
-        "name": "Letzte Lichteinstellungen wiederherstellen"
+        "name": "Lichteinstellungen automatisch speichern"
       },
       "wall_switch": {
-        "name": "Wandschaltermodus"
+        "name": "Flex Switch"
       },
       "power_recovery": {
         "name": "Nach Stromausfall einschalten"
       },
       "fade_in": {
         "name": "Sanft einschalten"
+      }
+    },
+    "select": {
+      "power_on_state": {
+        "name": "Zustand bei Stromzufuhr",
+        "state": {
+          "restore": "Vorherigen Zustand wiederherstellen",
+          "on": "Einschalten",
+          "off": "Ausgeschaltet bleiben"
+        }
       }
     },
     "sensor": {

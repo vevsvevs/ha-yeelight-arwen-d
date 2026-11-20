@@ -116,16 +116,26 @@
         "name": "Ambient follows primary light"
       },
       "remember_state": {
-        "name": "Restore last light settings"
+        "name": "Automatically save light settings"
       },
       "wall_switch": {
-        "name": "Wall switch mode"
+        "name": "Flex Switch"
       },
       "power_recovery": {
         "name": "Turn on after power loss"
       },
       "fade_in": {
         "name": "Fade in when turned on"
+      }
+    },
+    "select": {
+      "power_on_state": {
+        "name": "Power-on state",
+        "state": {
+          "restore": "Restore previous state",
+          "on": "Turn on",
+          "off": "Stay off"
+        }
       }
     },
     "sensor": {

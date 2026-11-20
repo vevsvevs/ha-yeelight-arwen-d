@@ -25,6 +25,8 @@ from .const import (
     MODEL_MONOB,
     MONOB_LIGHT_SIID,
     MONOB_PROPERTIES,
+    POWER_ON_OPTION_BY_VALUE,
+    POWER_ON_PROPERTY,
     PROPS,
     PROPS_CEILING3,
     PROPS_COLORC,
@@ -74,6 +76,11 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
     @property
     def power_property(self) -> str:
         return "main_power" if self.model == MODEL_ARWEN_D else "power"
+
+    @property
+    def power_on_option(self) -> str | None:
+        """Return the current startup mode if the firmware reports it."""
+        return POWER_ON_OPTION_BY_VALUE.get(str(self.data.get(POWER_ON_PROPERTY)))
 
     @callback
     def async_set_push_connected(self, connected: bool) -> None:
@@ -149,7 +156,9 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
                     raise MiioError("get_prop: unexpected property list")
                 state = dict(zip(self.props, values))
             if self.model in (MODEL_MONOB, MODEL_CEILING3):
-                state.update(await self._async_read_startup_settings())
+                state.update(await self._async_read_startup_settings(STARTUP_PROPS))
+            elif self.model == MODEL_ARWEN_D:
+                state.update(await self._async_read_startup_settings((POWER_ON_PROPERTY,)))
             if self.model == MODEL_COLORC and state["power"] not in ("on", "off"):
                 raise MiioError("get_prop: missing GU10 power state")
             if self.model != MODEL_MONOB:
@@ -185,15 +194,15 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
             state["off_delay"] = str(delay)
         return state
 
-    async def _async_read_startup_settings(self) -> dict[str, str]:
+    async def _async_read_startup_settings(self, props: tuple[str, ...]) -> dict[str, str]:
         # The main poll already reached this host. Optional reads need no IP rediscovery.
         try:
-            settings = await self.hass.async_add_executor_job(self.client.send, "get_prop", list(STARTUP_PROPS))
+            settings = await self.hass.async_add_executor_job(self.client.send, "get_prop", list(props))
         except MiioError as err:
             _LOGGER.debug("Optional startup settings unavailable: %s", err)
         else:
             if isinstance(settings, list):
-                return dict(zip(STARTUP_PROPS, settings))
+                return dict(zip(props, settings))
         return {}
 
     async def _async_read_timer(self, is_on: bool) -> dict[str, str]:

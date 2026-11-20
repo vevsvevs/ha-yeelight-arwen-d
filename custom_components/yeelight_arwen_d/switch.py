@@ -11,7 +11,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ArwenConfigEntry
-from .const import DOMAIN, MODEL_ARWEN_D
+from .const import DOMAIN, MODEL_ARWEN_D, POWER_ON_PROPERTY, POWER_ON_SETTING
 from .coordinator import ArwenCoordinator
 from .entity import ArwenEntity
 
@@ -20,7 +20,7 @@ SWITCH_SETTINGS = {
     "ambient_follows": ("bg_proact", "cfg_bg_proact", "0"),
     "remember_state": ("save_state", "cfg_save_state", "0"),
     "wall_switch": ("smart_switch", "cfg_smart_switch", "0"),
-    "power_recovery": ("init_power_opt", "cfg_init_power", "2"),
+    "power_recovery": (POWER_ON_PROPERTY, POWER_ON_SETTING, "2"),
 }
 
 
@@ -32,10 +32,14 @@ async def async_setup_entry(
     """Add one switch per setting."""
     coordinator = entry.runtime_data
     if coordinator.model == MODEL_ARWEN_D:
-        async_add_entities([
-            *(SettingSwitch(coordinator, key) for key in ("ambient_follows", "remember_state", "wall_switch")),
+        entities: list[SwitchEntity] = [
+            SettingSwitch(coordinator, "ambient_follows"),
+            SettingSwitch(coordinator, "wall_switch"),
             FadeInSwitch(coordinator),
-        ])
+        ]
+        if coordinator.power_on_option is None:
+            entities.append(SettingSwitch(coordinator, "remember_state"))
+        async_add_entities(entities)
     else:
         async_add_entities(SettingSwitch(coordinator, key) for key in ("remember_state", "power_recovery"))
 
