@@ -25,6 +25,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ArwenConfigEntry
 from .const import (
+    COLORC_TRANSITION_MS,
     COLOR_MODE_CT,
     COLOR_MODE_FLOW,
     COLOR_MODE_RGB,
@@ -293,7 +294,7 @@ class ColorcLight(GU10Light):
 
     @property
     def _default_ms(self) -> int:
-        return 500
+        return COLORC_TRANSITION_MS
 
     def _update_from_data(self) -> None:
         super()._update_from_data()

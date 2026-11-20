@@ -226,6 +226,8 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
                 for method, params in commands:
                     _LOGGER.debug("%s %s", method, params)
                     result = await self.async_call(method, params)
+                    if method == "set_default" and result != ["ok"]:
+                        raise MiioError(f"{method}: unexpected result {result}")
                     if method == "action":
                         if not isinstance(result, dict) or result.get("code") != 0:
                             raise MiioError(f"{method}: {result}")

@@ -7,6 +7,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ArwenConfigEntry
@@ -62,10 +63,17 @@ class SettingSwitch(ArwenEntity, SwitchEntity):
         return value == "1" if value else None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self.coordinator.async_send([("set_ps", [self._setting, "1"])])
+        await self._async_set("1")
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.coordinator.async_send([("set_ps", [self._setting, self._off_value])])
+        await self._async_set(self._off_value)
+
+    async def _async_set(self, value: str) -> None:
+        await self.coordinator.async_send([("set_ps", [self._setting, value])])
+        if self._is_gu10 and (
+            not self.available or str(self.coordinator.data.get(self._prop)) != value
+        ):
+            raise HomeAssistantError(f"The bulb did not confirm the {self.name} setting")
 
 
 class FadeInSwitch(ArwenEntity, SwitchEntity):
