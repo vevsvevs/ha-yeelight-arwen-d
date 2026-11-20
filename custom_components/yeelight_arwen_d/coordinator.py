@@ -18,8 +18,8 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_DID,
     DOMAIN,
-    GU10_SETTINGS_PROPS,
     INFO_INTERVAL,
+    MODEL_ARWEN_D,
     MODEL_CEILING3,
     MODEL_COLORC,
     MODEL_MONOB,
@@ -31,6 +31,7 @@ from .const import (
     PUSH_SCAN_INTERVAL,
     REDISCOVERY_INTERVAL,
     SCAN_INTERVAL,
+    STARTUP_PROPS,
 )
 from .miio import MiioClient, MiioError, MiioTimeout, discover
 
@@ -69,6 +70,10 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         if self.model == MODEL_COLORC:
             return PROPS_COLORC
         return PROPS_CEILING3 if self.model == MODEL_CEILING3 else PROPS
+
+    @property
+    def power_property(self) -> str:
+        return "main_power" if self.model == MODEL_ARWEN_D else "power"
 
     @callback
     def async_set_push_connected(self, connected: bool) -> None:
@@ -143,10 +148,12 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
                 if not isinstance(values, list) or len(values) != len(self.props):
                     raise MiioError("get_prop: unexpected property list")
                 state = dict(zip(self.props, values))
-            if self.model == MODEL_COLORC:
-                if state["power"] not in ("on", "off"):
-                    raise MiioError("get_prop: missing GU10 power state")
-                state.update(await self._async_read_colorc_timer(state["power"] == "on"))
+            if self.model in (MODEL_MONOB, MODEL_CEILING3):
+                state.update(await self._async_read_startup_settings())
+            if self.model == MODEL_COLORC and state["power"] not in ("on", "off"):
+                raise MiioError("get_prop: missing GU10 power state")
+            if self.model != MODEL_MONOB:
+                state.update(await self._async_read_timer(state[self.power_property] == "on"))
         except MiioError as err:
             raise UpdateFailed(str(err)) from err
         # Counted by time, not by polls: the state is also read after every command and on every push.
@@ -176,22 +183,26 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         delay = values.get(MONOB_PROPERTIES["off_delay"])
         if type(delay) is int and 0 <= delay <= 120:
             state["off_delay"] = str(delay)
-        try:
-            settings = await self.async_call("get_prop", list(GU10_SETTINGS_PROPS))
-        except MiioError as err:
-            _LOGGER.debug("Optional GU10 settings unavailable: %s", err)
-        else:
-            if isinstance(settings, list):
-                state.update(zip(GU10_SETTINGS_PROPS, settings))
         return state
 
-    async def _async_read_colorc_timer(self, is_on: bool) -> dict[str, str]:
+    async def _async_read_startup_settings(self) -> dict[str, str]:
+        # The main poll already reached this host. Optional reads need no IP rediscovery.
+        try:
+            settings = await self.hass.async_add_executor_job(self.client.send, "get_prop", list(STARTUP_PROPS))
+        except MiioError as err:
+            _LOGGER.debug("Optional startup settings unavailable: %s", err)
+        else:
+            if isinstance(settings, list):
+                return dict(zip(STARTUP_PROPS, settings))
+        return {}
+
+    async def _async_read_timer(self, is_on: bool) -> dict[str, str]:
         if not is_on:
             return {"off_delay": "0"}
         try:
-            jobs = await self.async_call("cron_get", [0])
+            jobs = await self.hass.async_add_executor_job(self.client.send, "cron_get", [0])
         except MiioError as err:
-            _LOGGER.debug("GU10 timer unavailable: %s", err)
+            _LOGGER.debug("Shutdown timer unavailable: %s", err)
             return {}
         if jobs == []:
             return {"off_delay": "0"}
@@ -242,6 +253,10 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
                         ):
                             raise MiioError(f"{method}: {result}")
         except MiioError as err:
-            raise HomeAssistantError(f"Lamp command failed: {err}") from err
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="command_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
         finally:
             await self.async_refresh()

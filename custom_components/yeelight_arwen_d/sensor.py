@@ -29,9 +29,9 @@ class ArwenDiagnosticSensor(ArwenEntity, SensorEntity):
 
     _attr_entity_category = EntityCategory.DIAGNOSTIC
 
-    def __init__(self, coordinator: ArwenCoordinator, key: str, name: str) -> None:
+    def __init__(self, coordinator: ArwenCoordinator, key: str) -> None:
         super().__init__(coordinator, key)
-        self._attr_name = name
+        self._attr_translation_key = key
 
 
 class SignalSensor(ArwenDiagnosticSensor):
@@ -42,7 +42,7 @@ class SignalSensor(ArwenDiagnosticSensor):
     _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
 
     def __init__(self, coordinator: ArwenCoordinator) -> None:
-        super().__init__(coordinator, "signal", "Wi-Fi signal")
+        super().__init__(coordinator, "signal")
 
     @property
     def native_value(self) -> int | None:
@@ -53,7 +53,7 @@ class IpSensor(ArwenDiagnosticSensor):
     """IP address the lamp is reached at."""
 
     def __init__(self, coordinator: ArwenCoordinator) -> None:
-        super().__init__(coordinator, "ip_address", "IP address")
+        super().__init__(coordinator, "ip_address")
 
     @property
     def native_value(self) -> str:
@@ -66,7 +66,7 @@ class RestartSensor(ArwenDiagnosticSensor):
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
     def __init__(self, coordinator: ArwenCoordinator) -> None:
-        super().__init__(coordinator, "last_restart", "Last restart")
+        super().__init__(coordinator, "last_restart")
 
     @property
     def native_value(self) -> datetime | None:
