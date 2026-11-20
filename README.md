@@ -2,8 +2,8 @@
 
 # Yeelight Arwen D for Home Assistant
 
-Custom integration for the Yeelight Arwen D ceiling lights
-(`yeelink.light.ceil43`), controlled entirely over the local network.
+Custom integration for Yeelight ceiling lights and GU10 W1 bulbs, controlled
+entirely over the local network.
 
 Tested with the Arwen 600D (about 60 cm, YLXDD-0150, firmware 2.1.7_0018). The
 smaller Arwen 500D (about 50 cm, YLXDD-0149) is sold as the same product ("Arwen Ceiling
@@ -48,7 +48,60 @@ For this model the integration:
 The configuration switches and the default transition entity are not created;
 the ceiling3 lacks those settings.
 
-## Features
+## Yeelight GU10 W1
+
+Both bulbs use the same IP and miIO token setup as the ceiling lights and are
+polled every 3 seconds. Changes are read again immediately after a command.
+Neither bulb needs Yeelight LAN mode.
+
+| Model | Primary light | Other controls |
+|---|---|---|
+| [`yeelink.light.colorc`](https://home.miot-spec.com/spec?type=urn:miot-spec-v2:device:light:0000A001:yeelink-colorc:1:0000C814) | Power, brightness, RGB, white (2700–6500 K), transitions, Flow | Off-delay timer (0–120 min) |
+| [`yeelink.light.monob`](https://home.miot-spec.com/spec/yeelink.light.monob) | Power and brightness | Off-delay timer (0–120 min), Toggle and Brightness up/down buttons |
+
+For `yeelight_arwen_d.adjust`, Home Assistant computes the relative changes
+from the last reported GU10 state. `monob` has a fixed white temperature and
+its MIoT commands use the bulb's own timing.
+
+The off-delay timer runs on the bulb. For `colorc`, turn the bulb on before
+setting the timer. Set the delay to 0 to cancel it. The W1 bulbs expose
+power-on behavior and a button to save the current light as the startup preset
+under **Configuration**. The configuration switches require the corresponding
+firmware properties to be readable. To save the preset, switch the bulb on
+and disable **Remember last state**. Wi-Fi signal, IP address and last restart
+appear under **Diagnostic**.
+
+The multicolor bulb implements Flow through the same `set_scene ["cf", …]`
+command used by its Mi Home plugin, carried over local miIO. It starts a
+continuous cycle using the app's default colors and speed. Home Assistant
+reads the bulb's `flowing` status, including when the app started the effect.
+Choose `off` in the effect picker to stop it, or set a static color or white
+temperature. The published MIoT specification exposes only Color and Ct modes.
+The app fetches its recommended scenes and saved favorites from Xiaomi's
+servers, so those menus are outside the local device integration.
+
+Expose the primary `light` entity to Assist for standard light commands.
+To start Flow by voice with the built-in conversation agent, add an automation
+with a [sentence trigger](https://www.home-assistant.io/integrations/conversation/#configuration)
+and call the light service with the effect. Replace the entity ID with your
+bulb's ID.
+
+```yaml
+triggers:
+  - trigger: conversation
+    command: "start color flow"
+actions:
+  - action: light.turn_on
+    target:
+      entity_id: light.yeelight_gu10_w1_multicolor_primary_light
+    data:
+      effect: Flow
+```
+
+GU10 commands and Home Assistant entities were checked against simulated miIO
+responses. Testing on physical GU10 W1 hardware is pending.
+
+## Arwen D features
 
 - **Primary light** (`light.yeelight_arwen_d_primary_light`): on/off,
   brightness, color temperature (2700-6500 K), RGB, transitions.

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
@@ -17,10 +18,16 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_DID,
     DOMAIN,
+    GU10_SETTINGS_PROPS,
     INFO_INTERVAL,
     MODEL_CEILING3,
+    MODEL_COLORC,
+    MODEL_MONOB,
+    MONOB_LIGHT_SIID,
+    MONOB_PROPERTIES,
     PROPS,
     PROPS_CEILING3,
+    PROPS_COLORC,
     PUSH_SCAN_INTERVAL,
     REDISCOVERY_INTERVAL,
     SCAN_INTERVAL,
@@ -30,8 +37,13 @@ from .miio import MiioClient, MiioError, MiioTimeout, discover
 _LOGGER = logging.getLogger(__name__)
 
 
+def monob_property(key: str) -> dict[str, Any]:
+    """Address a GU10 dimmable light property in a local MIoT request."""
+    return {"did": key, "siid": MONOB_LIGHT_SIID, "piid": MONOB_PROPERTIES[key]}
+
+
 class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
-    """Read all properties with one get_prop call.
+    """Read lamp properties over miIO.
 
     The Arwen D sends no local push updates and is polled every 3 s. The ceiling3 pushes its
     changes over the Yeelight LAN protocol (lan.py); while that connection is open it is polled
@@ -41,6 +53,7 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry, client: MiioClient) -> None:
         super().__init__(hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=SCAN_INTERVAL)
         self.client = client
+        self._io_lock = asyncio.Lock()
         self.info: dict[str, Any] = {}
         self.boot_time: datetime | None = None
         # monotonic() starts near 0 at host boot, so 0.0 would block discovery for the first minute.
@@ -53,6 +66,8 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
 
     @property
     def props(self) -> tuple[str, ...]:
+        if self.model == MODEL_COLORC:
+            return PROPS_COLORC
         return PROPS_CEILING3 if self.model == MODEL_CEILING3 else PROPS
 
     @callback
@@ -83,7 +98,7 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         try:
             return await self.hass.async_add_executor_job(self.client.send, method, params)
         except MiioTimeout:
-            if not await self._async_rediscover():
+            if not await self._async_rediscover() or method == "action":
                 raise
         return await self.hass.async_add_executor_job(self.client.send, method, params)
 
@@ -116,8 +131,22 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         return True
 
     async def _async_update_data(self) -> dict[str, str]:
+        async with self._io_lock:
+            return await self._async_read()
+
+    async def _async_read(self) -> dict[str, str]:
         try:
-            values = await self.async_call("get_prop", list(self.props))
+            if self.model == MODEL_MONOB:
+                state = await self._async_read_monob()
+            else:
+                values = await self.async_call("get_prop", list(self.props))
+                if not isinstance(values, list) or len(values) != len(self.props):
+                    raise MiioError("get_prop: unexpected property list")
+                state = dict(zip(self.props, values))
+            if self.model == MODEL_COLORC:
+                if state["power"] not in ("on", "off"):
+                    raise MiioError("get_prop: missing GU10 power state")
+                state.update(await self._async_read_colorc_timer(state["power"] == "on"))
         except MiioError as err:
             raise UpdateFailed(str(err)) from err
         # Counted by time, not by polls: the state is also read after every command and on every push.
@@ -126,9 +155,66 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
                 await self.async_refresh_info()
             except MiioError as err:
                 _LOGGER.debug("miIO.info failed: %s", err)
-        return dict(zip(self.props, values))
+        return state
 
-    async def async_send(self, commands: list[tuple[str, list[Any]]]) -> None:
+    async def _async_read_monob(self) -> dict[str, str]:
+        results = await self.async_call(
+            "get_properties", [monob_property(key) for key in MONOB_PROPERTIES]
+        )
+        if not isinstance(results, list):
+            raise MiioError("get_properties: unexpected result")
+        values = {
+            item.get("piid"): item.get("value")
+            for item in results
+            if isinstance(item, dict) and item.get("code") == 0
+        }
+        power = values.get(MONOB_PROPERTIES["power"])
+        brightness = values.get(MONOB_PROPERTIES["bright"])
+        if not isinstance(power, bool) or type(brightness) is not int:
+            raise MiioError("get_properties: missing MIoT power or brightness")
+        state = {"power": "on" if power else "off", "bright": str(brightness)}
+        delay = values.get(MONOB_PROPERTIES["off_delay"])
+        if type(delay) is int and 0 <= delay <= 120:
+            state["off_delay"] = str(delay)
+        try:
+            settings = await self.async_call("get_prop", list(GU10_SETTINGS_PROPS))
+        except MiioError as err:
+            _LOGGER.debug("Optional GU10 settings unavailable: %s", err)
+        else:
+            if isinstance(settings, list):
+                state.update(zip(GU10_SETTINGS_PROPS, settings))
+        return state
+
+    async def _async_read_colorc_timer(self, is_on: bool) -> dict[str, str]:
+        if not is_on:
+            return {"off_delay": "0"}
+        try:
+            jobs = await self.async_call("cron_get", [0])
+        except MiioError as err:
+            _LOGGER.debug("GU10 timer unavailable: %s", err)
+            return {}
+        if jobs == []:
+            return {"off_delay": "0"}
+        if isinstance(jobs, list) and jobs and isinstance(jobs[0], dict):
+            delay = str(jobs[0].get("delay", ""))
+            if delay.isdecimal() and 0 <= int(delay) <= 120:
+                return {"off_delay": delay}
+        return {}
+
+    async def async_set_monob(self, **values: bool | int) -> None:
+        """Send MIoT property writes in order so power has applied before brightness."""
+        await self.async_send([
+            ("set_properties", [{**monob_property(key), "value": value}])
+            for key, value in values.items()
+        ])
+
+    async def async_monob_action(self, aiid: int) -> None:
+        """Call one of the dimmable bulb's MIoT light actions."""
+        await self.async_send([
+            ("action", {"did": f"light-{aiid}", "siid": MONOB_LIGHT_SIID, "aiid": aiid, "in": []})
+        ])
+
+    async def async_send(self, commands: list[tuple[str, Any]]) -> None:
         """Send commands in order, then read the state; a failed command raises in the service call.
 
         The state is read before the action returns, so the next step of a knob turned quickly
@@ -136,9 +222,23 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         only about 0.2 s later.
         """
         try:
-            for method, params in commands:
-                _LOGGER.debug("%s %s", method, params)
-                await self.async_call(method, params)
+            async with self._io_lock:
+                for method, params in commands:
+                    _LOGGER.debug("%s %s", method, params)
+                    result = await self.async_call(method, params)
+                    if method == "action":
+                        if not isinstance(result, dict) or result.get("code") != 0:
+                            raise MiioError(f"{method}: {result}")
+                    elif method == "set_properties":
+                        if (
+                            not isinstance(result, list)
+                            or len(result) != len(params)
+                            or any(
+                                not isinstance(item, dict) or item.get("code") not in (0, 1)
+                                for item in result
+                            )
+                        ):
+                            raise MiioError(f"{method}: {result}")
         except MiioError as err:
             raise HomeAssistantError(f"Lamp command failed: {err}") from err
         finally:

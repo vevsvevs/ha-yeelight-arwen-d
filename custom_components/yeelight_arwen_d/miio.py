@@ -61,14 +61,16 @@ class MiioClient:
         Commands like adjust_bright are not idempotent, so a reply lost after the lamp acted
         applies them twice; more retries would make that more likely.
         """
-        for attempt in range(2):
+        # MIoT actions such as toggle must not be replayed after a lost reply.
+        attempts = 1 if method == "action" else 2
+        for attempt in range(attempts):
             try:
                 reply = self._exchange(method, params)
                 break
             except OSError as err:
                 # The lamp may have restarted and reset its clock; the retry starts with a hello.
                 self._header = None
-                if attempt == 1:
+                if attempt == attempts - 1:
                     raise MiioTimeout(f"{method}: no reply from {self.host}") from err
         try:
             response = self._unpack(reply)

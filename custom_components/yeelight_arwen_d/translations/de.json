@@ -32,11 +32,11 @@
   "services": {
     "adjust": {
       "name": "Anpassen",
-      "description": "Ändert Helligkeit und/oder Farbtemperatur relativ zum aktuellen Wert. Die Lampe berechnet den neuen Wert selbst.",
+      "description": "Ändert Helligkeit und/oder Farbtemperatur relativ zum aktuellen Wert. Bei GU10-W1-Lampen verwendet Home Assistant den zuletzt gemeldeten Wert.",
       "fields": {
         "brightness_step": { "name": "Helligkeitsschritt", "description": "Änderung in Prozentpunkten, -100 bis 100. Ein ausgeschaltetes Licht zählt als 0 % und geht an; unter 1 % geht es aus." },
         "color_temp_step": { "name": "Farbtemperaturschritt", "description": "Änderung in Prozent der aktuellen Farbtemperatur, -100 bis 100." },
-        "transition": { "name": "Übergang", "description": "Überblendzeit in Sekunden. Ohne Angabe gilt die Standard-Übergangszeit der Lampe." }
+        "transition": { "name": "Übergang", "description": "Überblendzeit in Sekunden, sofern unterstützt. Ohne Angabe gilt die Standard-Übergangszeit." }
       }
     }
   }
