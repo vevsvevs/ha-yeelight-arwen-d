@@ -8,19 +8,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 
 from . import lan
-from .const import CONF_DID, MODEL_CEILING3
+from .const import CONF_DID, DOMAIN, MODEL_CEILING3
 from .coordinator import ArwenCoordinator
 from .miio import MiioClient, MiioError
 
-PLATFORMS = [Platform.BUTTON, Platform.LIGHT, Platform.NUMBER, Platform.SENSOR, Platform.SWITCH]
-# The ceiling3 has none of the Mi Home settings that the number and switch entities write.
-PLATFORMS_CEILING3 = [Platform.BUTTON, Platform.LIGHT, Platform.SENSOR]
+PLATFORMS = [Platform.BUTTON, Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.SWITCH]
 
 type ArwenConfigEntry = ConfigEntry[ArwenCoordinator]
-
-
-def _platforms(coordinator: ArwenCoordinator) -> list[Platform]:
-    return PLATFORMS_CEILING3 if coordinator.model == MODEL_CEILING3 else PLATFORMS
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ArwenConfigEntry) -> bool:
@@ -29,7 +23,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ArwenConfigEntry) -> boo
     try:
         await coordinator.async_refresh_info()
     except MiioError as err:
-        raise ConfigEntryNotReady(str(err)) from err
+        raise ConfigEntryNotReady(
+            translation_domain=DOMAIN,
+            translation_key="connection_failed",
+            translation_placeholders={"error": str(err)},
+        ) from err
     if entry.data.get(CONF_DID) != coordinator.client.did:
         hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_DID: coordinator.client.did})
 
@@ -46,10 +44,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ArwenConfigEntry) -> boo
             ),
             "yeelight_arwen_d LAN push",
         )
-    await hass.config_entries.async_forward_entry_setups(entry, _platforms(coordinator))
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ArwenConfigEntry) -> bool:
     """Unload a config entry."""
-    return await hass.config_entries.async_unload_platforms(entry, _platforms(entry.runtime_data))
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)

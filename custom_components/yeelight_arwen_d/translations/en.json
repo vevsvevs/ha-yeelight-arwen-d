@@ -39,5 +39,132 @@
         "transition": { "name": "Transition", "description": "Fade time in seconds, where supported. Omit it to use the default." }
       }
     }
+  },
+  "entity": {
+    "light": {
+      "primary_light": {
+        "name": "Primary light",
+        "state_attributes": {
+          "effect": {
+            "state": {
+              "off": "Off",
+              "Night light": "Night light",
+              "Glittering": "Glittering",
+              "Pinball": "Pinball",
+              "Deep Sea": "Deep Sea",
+              "Rainbow": "Rainbow",
+              "Green Shade": "Green Shade",
+              "Ice Cream": "Ice Cream",
+              "Waxing Moon": "Waxing Moon",
+              "Green Hills": "Green Hills",
+              "Bonfire": "Bonfire",
+              "Party": "Party",
+              "Garden": "Garden",
+              "Winter": "Winter",
+              "Heartbeat": "Heartbeat",
+              "Christmas": "Christmas",
+              "Sunset": "Sunset",
+              "Fantasy": "Fantasy"
+            }
+          }
+        }
+      },
+      "ambient": {
+        "name": "Ambient light"
+      },
+      "colorc": {
+        "state_attributes": {
+          "effect": {
+            "state": {
+              "off": "Off",
+              "Flow": "Flow"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "default_transition": {
+        "name": "Default transition"
+      },
+      "off_delay": {
+        "name": "Off delay"
+      }
+    },
+    "button": {
+      "toggle": {
+        "name": "Toggle"
+      },
+      "brightness_up": {
+        "name": "Brightness up"
+      },
+      "brightness_down": {
+        "name": "Brightness down"
+      },
+      "color_temp_up": {
+        "name": "Color temperature up"
+      },
+      "color_temp_down": {
+        "name": "Color temperature down"
+      },
+      "save_default": {
+        "name": "Save current light as default"
+      }
+    },
+    "switch": {
+      "ambient_follows": {
+        "name": "Ambient follows primary light"
+      },
+      "remember_state": {
+        "name": "Automatically save light settings"
+      },
+      "wall_switch": {
+        "name": "Flex Switch"
+      },
+      "power_recovery": {
+        "name": "Turn on after power loss"
+      },
+      "fade_in": {
+        "name": "Fade in when turned on"
+      }
+    },
+    "select": {
+      "power_on_state": {
+        "name": "Power-on state",
+        "state": {
+          "restore": "Restore previous state",
+          "on": "Turn on",
+          "off": "Stay off"
+        }
+      }
+    },
+    "sensor": {
+      "signal": {
+        "name": "Wi-Fi signal"
+      },
+      "ip_address": {
+        "name": "IP address"
+      },
+      "last_restart": {
+        "name": "Last restart"
+      }
+    }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "Lamp command failed: {error}"
+    },
+    "connection_failed": {
+      "message": "Could not connect to the lamp: {error}"
+    },
+    "setting_not_confirmed": {
+      "message": "The lamp did not confirm the new setting."
+    },
+    "cannot_save_default": {
+      "message": "Turn the lamp on and disable automatic saving before saving the startup preset."
+    },
+    "fixed_color_temperature": {
+      "message": "This lamp has a fixed color temperature."
+    }
   }
 }

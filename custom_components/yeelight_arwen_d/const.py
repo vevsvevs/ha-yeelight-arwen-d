@@ -36,18 +36,17 @@ PROPS = (
 # Properties of the ceiling3: white light and night light only. active_mode is 1 in night light.
 PROPS_CEILING3 = ("power", "bright", "ct", "nl_br", "active_mode", "trans_interval_dflt")
 
-GU10_SETTINGS_PROPS = ("save_state", "init_power_opt")
-PROPS_COLORC = ("power", "bright", "ct", "rgb", "color_mode", "flowing", "hue", "sat", *GU10_SETTINGS_PROPS)
+POWER_ON_PROPERTY = "init_power_opt"
+POWER_ON_SETTING = "cfg_init_power"
+STARTUP_PROPS = ("save_state", POWER_ON_PROPERTY)
+# Yeelight's legacy InitPowerOption enum. The Arwen selector requires a readable value.
+POWER_ON_OPTIONS = {"restore": "0", "on": "1", "off": "2"}
+POWER_ON_OPTION_BY_VALUE = {value: option for option, value in POWER_ON_OPTIONS.items()}
+PROPS_COLORC = ("power", "bright", "ct", "rgb", "color_mode", "flowing", "hue", "sat", *STARTUP_PROPS)
+TIMER_MAX_MINUTES = {MODEL_ARWEN_D: 60, MODEL_CEILING3: 60, MODEL_COLORC: 120, MODEL_MONOB: 120}
 COLORC_TRANSITION_MS = 500
 MONOB_LIGHT_SIID = 2
 MONOB_PROPERTIES = {"power": 1, "bright": 3, "off_delay": 7}
-
-# On/off settings of the Mi Home app: key -> (property read with get_prop, name written with set_ps, entity name).
-SWITCH_SETTINGS = {
-    "ambient_follows": ("bg_proact", "cfg_bg_proact", "Ambient follows primary light"),
-    "remember_state": ("save_state", "cfg_save_state", "Remember last state"),
-    "wall_switch": ("smart_switch", "cfg_smart_switch", "Wall switch mode"),
-}
 
 # color_mode values of the main light.
 COLOR_MODE_RGB = 1

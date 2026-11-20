@@ -39,5 +39,132 @@
         "transition": { "name": "Übergang", "description": "Überblendzeit in Sekunden, sofern unterstützt. Ohne Angabe gilt die Standard-Übergangszeit." }
       }
     }
+  },
+  "entity": {
+    "light": {
+      "primary_light": {
+        "name": "Hauptlicht",
+        "state_attributes": {
+          "effect": {
+            "state": {
+              "off": "Aus",
+              "Night light": "Nachtlicht",
+              "Glittering": "Funkeln",
+              "Pinball": "Flipper",
+              "Deep Sea": "Tiefsee",
+              "Rainbow": "Regenbogen",
+              "Green Shade": "Grüner Schatten",
+              "Ice Cream": "Eiscreme",
+              "Waxing Moon": "Zunehmender Mond",
+              "Green Hills": "Grüne Hügel",
+              "Bonfire": "Lagerfeuer",
+              "Party": "Party",
+              "Garden": "Garten",
+              "Winter": "Winter",
+              "Heartbeat": "Herzschlag",
+              "Christmas": "Weihnachten",
+              "Sunset": "Sonnenuntergang",
+              "Fantasy": "Fantasie"
+            }
+          }
+        }
+      },
+      "ambient": {
+        "name": "Hintergrundbeleuchtung"
+      },
+      "colorc": {
+        "state_attributes": {
+          "effect": {
+            "state": {
+              "off": "Aus",
+              "Flow": "Farbwechsel"
+            }
+          }
+        }
+      }
+    },
+    "number": {
+      "default_transition": {
+        "name": "Standard-Übergangszeit"
+      },
+      "off_delay": {
+        "name": "Ausschaltverzögerung"
+      }
+    },
+    "button": {
+      "toggle": {
+        "name": "Umschalten"
+      },
+      "brightness_up": {
+        "name": "Helligkeit erhöhen"
+      },
+      "brightness_down": {
+        "name": "Helligkeit verringern"
+      },
+      "color_temp_up": {
+        "name": "Farbtemperatur erhöhen"
+      },
+      "color_temp_down": {
+        "name": "Farbtemperatur senken"
+      },
+      "save_default": {
+        "name": "Aktuelle Lichteinstellungen als Standard speichern"
+      }
+    },
+    "switch": {
+      "ambient_follows": {
+        "name": "Hintergrundbeleuchtung folgt dem Hauptlicht"
+      },
+      "remember_state": {
+        "name": "Lichteinstellungen automatisch speichern"
+      },
+      "wall_switch": {
+        "name": "Flex Switch"
+      },
+      "power_recovery": {
+        "name": "Nach Stromausfall einschalten"
+      },
+      "fade_in": {
+        "name": "Sanft einschalten"
+      }
+    },
+    "select": {
+      "power_on_state": {
+        "name": "Zustand bei Stromzufuhr",
+        "state": {
+          "restore": "Vorherigen Zustand wiederherstellen",
+          "on": "Einschalten",
+          "off": "Ausgeschaltet bleiben"
+        }
+      }
+    },
+    "sensor": {
+      "signal": {
+        "name": "WLAN-Signalstärke"
+      },
+      "ip_address": {
+        "name": "IP-Adresse"
+      },
+      "last_restart": {
+        "name": "Letzter Neustart"
+      }
+    }
+  },
+  "exceptions": {
+    "command_failed": {
+      "message": "Lampenbefehl fehlgeschlagen: {error}"
+    },
+    "connection_failed": {
+      "message": "Verbindung zur Lampe fehlgeschlagen: {error}"
+    },
+    "setting_not_confirmed": {
+      "message": "Die Lampe hat die neue Einstellung nicht bestätigt."
+    },
+    "cannot_save_default": {
+      "message": "Schalte die Lampe ein und deaktiviere das automatische Speichern, bevor du die Startvorgabe speicherst."
+    },
+    "fixed_color_temperature": {
+      "message": "Diese Lampe hat eine feste Farbtemperatur."
+    }
   }
 }

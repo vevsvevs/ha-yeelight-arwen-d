@@ -45,8 +45,9 @@ For this model the integration:
   and can be older than the state read after a later command. While the
   connection is open the lamp is polled once a minute, otherwise every 3 s.
 
-The configuration switches and the default transition entity are not created;
-the ceiling3 lacks those settings.
+The Mi Home plugin shared with Ceiling1 explicitly lists the startup light
+settings and the shutdown timer for Ceiling3. The off-delay timer runs for up
+to 60 minutes. [Ceiling3 Mi Home plugin](https://home.miot-spec.com/download-plugin/yeelink.light.ceiling3)
 
 ## Yeelight GU10 W1
 
@@ -69,16 +70,6 @@ its MIoT commands use the bulb's own timing.
 
 The **Off delay** (0–120 min) is under **Configuration** and runs on the bulb.
 For `colorc`, turn the bulb on before setting the timer. Set it to 0 to cancel.
-
-Both model-specific Mi Home plugins include startup settings through Yeelight
-commands over miIO. The published MIoT specifications omit these settings.
-**Remember last state** automatically saves the light settings. **Turn on after
-power loss** controls whether the bulb turns on when mains power returns.
-Each switch is available when the firmware reports its setting. **Save current
-light as default** stores the current light settings as a startup preset.
-Switch the bulb on and disable automatic saving before using it. Actual
-behavior after loss of mains power depends on the firmware and has yet to be
-verified on physical GU10 hardware for this integration.
 
 Wi-Fi signal, IP address and last restart appear under **Diagnostic**.
 
@@ -112,6 +103,26 @@ actions:
 GU10 commands and Home Assistant entities were checked against simulated miIO
 responses. Testing on physical GU10 W1 hardware is pending.
 
+## Startup settings
+
+Ceiling3 and both GU10 W1 bulbs use the same three controls in **Configuration**.
+
+- **Turn on after power loss** controls whether the lamp turns on automatically
+  when mains power returns.
+- **Automatically save light settings** controls whether the lamp saves the
+  current light settings for the next startup.
+- **Save current light as default** stores a manual startup preset. Enable this
+  button in Home Assistant, turn the lamp on, and disable automatic saving
+  before pressing it.
+
+Arwen D uses **Power-on state** with the same three choices as Mi Home:
+restore the previous state, turn on, and stay off. The selector is available
+when the firmware reports a recognized `init_power_opt` value at setup.
+Firmware that does not report it continues to use the existing automatic
+save switch. **Flex Switch** retains the old wall-switch entity ID and
+controls support for the Yeelight wall switch. It is independent of the
+power-on selector.
+
 ## Arwen D features
 
 - **Primary light** (`light.yeelight_arwen_d_primary_light`): on/off,
@@ -144,7 +155,7 @@ responses. Testing on physical GU10 W1 hardware is pending.
     brightness_step: -10
     transition: 0.3
   ```
-- State is read locally every 3 s with one `get_prop` call, and right after
+- Light state is read locally every 3 s with `get_prop`, and right after
   every command. The lamp sends no local push updates, so changes from the
   Mi Home app or the remote appear with up to 3 s delay.
 - **Diagnostic sensors**: Wi-Fi signal (dBm), IP address and last restart,
@@ -152,9 +163,9 @@ responses. Testing on physical GU10 W1 hardware is pending.
 - **Configuration** (settings of the Mi Home app, stored in the lamp):
   - `Ambient follows primary light`: the ambient light turns on and off with
     the primary light.
-  - `Remember last state`: after power returns, the lamp restores its last
-    state.
-  - `Wall switch mode`: for operation with a Mi wall switch.
+  - `Power-on state` and `Flex Switch`: see [Startup settings](#startup-settings).
+  - `Off delay`: turn off after 1–60 minutes while the light is on. Set it to 0
+    to cancel. [Arwen D product FAQ](https://home.miot-spec.com/en/p/yeelink.light.ceil43)
   - `Default transition` (0-10000 ms): the fade the lamp uses when a command
     carries no fade time.
   - `Fade in when turned on`: the lamp fades in instead of switching on at

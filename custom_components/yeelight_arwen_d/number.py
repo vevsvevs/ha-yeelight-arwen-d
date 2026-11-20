@@ -1,4 +1,4 @@
-"""Default transition of the lamp as a configuration number."""
+"""Shutdown timer and default transition as configuration numbers."""
 
 from __future__ import annotations
 
@@ -8,7 +8,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from . import ArwenConfigEntry
-from .const import GU10_MODELS, MODEL_MONOB
+from .const import MODEL_ARWEN_D, MODEL_MONOB, TIMER_MAX_MINUTES
 from .coordinator import ArwenCoordinator
 from .entity import ArwenEntity
 
@@ -18,18 +18,18 @@ async def async_setup_entry(
     entry: ArwenConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Add the model's transition setting or the bulb's shutoff timer."""
+    """Add the shutoff timer and the Arwen D transition setting."""
     coordinator = entry.runtime_data
-    if coordinator.model in GU10_MODELS:
-        async_add_entities([OffDelay(coordinator)])
-    else:
-        async_add_entities([DefaultTransition(coordinator)])
+    entities: list[NumberEntity] = [OffDelay(coordinator)]
+    if coordinator.model == MODEL_ARWEN_D:
+        entities.append(DefaultTransition(coordinator))
+    async_add_entities(entities)
 
 
 class DefaultTransition(ArwenEntity, NumberEntity):
     """Fade the lamp uses when a command carries no transition (Mi Home app: dimming time)."""
 
-    _attr_name = "Default transition"
+    _attr_translation_key = "default_transition"
     _attr_entity_category = EntityCategory.CONFIG
     _attr_mode = NumberMode.BOX
     _attr_native_unit_of_measurement = UnitOfTime.MILLISECONDS
@@ -55,16 +55,16 @@ class DefaultTransition(ArwenEntity, NumberEntity):
 class OffDelay(ArwenEntity, NumberEntity):
     """Start or cancel the shutoff timer that runs on the bulb."""
 
-    _attr_name = "Off delay"
+    _attr_translation_key = "off_delay"
     _attr_entity_category = EntityCategory.CONFIG
     _attr_mode = NumberMode.BOX
     _attr_native_unit_of_measurement = UnitOfTime.MINUTES
     _attr_native_min_value = 0
-    _attr_native_max_value = 120
     _attr_native_step = 1
 
     def __init__(self, coordinator: ArwenCoordinator) -> None:
         super().__init__(coordinator, "off_delay")
+        self._attr_native_max_value = TIMER_MAX_MINUTES[coordinator.model]
 
     @property
     def available(self) -> bool:

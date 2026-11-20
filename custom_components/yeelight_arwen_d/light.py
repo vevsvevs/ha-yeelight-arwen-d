@@ -29,6 +29,7 @@ from .const import (
     COLOR_MODE_CT,
     COLOR_MODE_FLOW,
     COLOR_MODE_RGB,
+    DOMAIN,
     EFFECT_BY_INDEX,
     EFFECT_FLOW,
     EFFECT_NIGHT_LIGHT,
@@ -165,7 +166,7 @@ class ArwenLight(ArwenEntity, LightEntity):
 class MainLight(ArwenLight):
     """Main light: white, RGB, night light and the effects of the addressable LED ring."""
 
-    _attr_name = "Primary light"
+    _attr_translation_key = "primary_light"
     _attr_supported_features = LightEntityFeature.TRANSITION | LightEntityFeature.EFFECT
     _attr_effect_list = [EFFECT_OFF, EFFECT_NIGHT_LIGHT, *EFFECTS]
 
@@ -269,7 +270,7 @@ class GU10Light(ArwenLight):
     ) -> None:
         """Translate percentage changes into the GU10 bulb's absolute controls."""
         if color_temp_step and ColorMode.COLOR_TEMP not in self.supported_color_modes:
-            raise HomeAssistantError("This lamp has a fixed color temperature")
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="fixed_color_temperature")
         kwargs: dict[str, Any] = {ATTR_TRANSITION: transition}
         if brightness_step:
             current = num(self.coordinator.data["bright"]) if self.is_on else 0
@@ -290,6 +291,7 @@ class ColorcLight(GU10Light):
     """Multicolor GU10 with the Flow mode of its Mi Home plugin."""
 
     _attr_supported_features = LightEntityFeature.TRANSITION | LightEntityFeature.EFFECT
+    _attr_translation_key = "colorc"
     _attr_effect_list = [EFFECT_OFF, EFFECT_FLOW]
 
     @property
@@ -363,7 +365,7 @@ class MonobLight(GU10Light):
 class AmbientLight(ArwenLight):
     """RGB ambient light around the ceiling light."""
 
-    _attr_name = "Ambient light"
+    _attr_translation_key = "ambient"
     _prefix = "bg_"
     _attr_supported_features = LightEntityFeature.TRANSITION
 
