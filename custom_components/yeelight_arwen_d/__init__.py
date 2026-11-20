@@ -1,4 +1,4 @@
-"""Local control of Yeelight Arwen D and Ceiling3 ceiling lights over miIO."""
+"""Local control of Yeelight lights over miIO."""
 
 from __future__ import annotations
 

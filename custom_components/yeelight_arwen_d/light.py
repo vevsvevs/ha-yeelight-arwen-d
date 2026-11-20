@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from colorsys import hsv_to_rgb
 from typing import Any
 
 import voluptuous as vol
@@ -18,6 +19,7 @@ from homeassistant.components.light import (
     LightEntityFeature,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
@@ -27,16 +29,22 @@ from .const import (
     COLOR_MODE_FLOW,
     COLOR_MODE_RGB,
     EFFECT_BY_INDEX,
+    EFFECT_FLOW,
     EFFECT_NIGHT_LIGHT,
     EFFECTS,
+    FLOW_COLORS,
+    FLOW_STEP_MS,
     MAX_KELVIN,
     MIN_KELVIN,
     MODEL_CEILING3,
+    MODEL_COLORC,
+    MODEL_MONOB,
     POWER_MODE_CT,
     POWER_MODE_RGB,
 )
 from .coordinator import ArwenCoordinator
 from .entity import ArwenEntity
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -45,7 +53,11 @@ async def async_setup_entry(
 ) -> None:
     """Add the lights of the lamp model, and the adjust action."""
     coordinator = entry.runtime_data
-    if coordinator.model == MODEL_CEILING3:
+    if coordinator.model == MODEL_COLORC:
+        async_add_entities([ColorcLight(coordinator)])
+    elif coordinator.model == MODEL_MONOB:
+        async_add_entities([MonobLight(coordinator)])
+    elif coordinator.model == MODEL_CEILING3:
         async_add_entities([Ceiling3Light(coordinator)])
     else:
         async_add_entities([MainLight(coordinator), AmbientLight(coordinator)])
@@ -75,7 +87,7 @@ def to_percent(brightness: int) -> int:
     return max(1, round(brightness * 100 / 255))
 
 
-def num(value: str, default: int = 0) -> int:
+def num(value: str | None, default: int = 0) -> int:
     """Convert a get_prop value; properties a firmware does not know come back as ""."""
     return int(value) if value else default
 
@@ -234,6 +246,117 @@ class Ceiling3Light(MainLight):
         self._attr_brightness = to_brightness(d["nl_br"] if night_light else d["bright"])
         self._attr_color_temp_kelvin = clamp_kelvin(num(d["ct"], MIN_KELVIN))
         self._attr_effect = EFFECT_NIGHT_LIGHT if night_light else EFFECT_OFF
+
+
+class GU10Light(ArwenLight):
+    """Common state and relative adjustments for the GU10 bulbs."""
+
+    _attr_name = "Primary light"
+
+    def __init__(self, coordinator: ArwenCoordinator) -> None:
+        super().__init__(coordinator, "main")
+
+    def _update_from_data(self) -> None:
+        self._attr_is_on = self.coordinator.data["power"] == "on"
+        self._attr_brightness = to_brightness(self.coordinator.data["bright"])
+
+    async def async_adjust(
+        self,
+        brightness_step: int | None = None,
+        color_temp_step: int | None = None,
+        transition: float | None = None,
+    ) -> None:
+        """Translate percentage changes into the GU10 bulb's absolute controls."""
+        if color_temp_step and ColorMode.COLOR_TEMP not in self.supported_color_modes:
+            raise HomeAssistantError("This lamp has a fixed color temperature")
+        kwargs: dict[str, Any] = {ATTR_TRANSITION: transition}
+        if brightness_step:
+            current = num(self.coordinator.data["bright"]) if self.is_on else 0
+            target = min(100, current + brightness_step)
+            if target <= 0:
+                if self.is_on:
+                    await self.async_turn_off(**kwargs)
+                return
+            kwargs[ATTR_BRIGHTNESS] = to_brightness(str(target))
+        if color_temp_step:
+            kelvin = self.color_temp_kelvin or MIN_KELVIN
+            kwargs[ATTR_COLOR_TEMP_KELVIN] = clamp_kelvin(round(kelvin * (1 + color_temp_step / 100)))
+        if brightness_step or color_temp_step:
+            await self.async_turn_on(**kwargs)
+
+
+class ColorcLight(GU10Light):
+    """Multicolor GU10 with the Flow mode of its Mi Home plugin."""
+
+    _attr_supported_features = LightEntityFeature.TRANSITION | LightEntityFeature.EFFECT
+    _attr_effect_list = [EFFECT_OFF, EFFECT_FLOW]
+
+    @property
+    def _default_ms(self) -> int:
+        return 500
+
+    def _update_from_data(self) -> None:
+        super()._update_from_data()
+        data = self.coordinator.data
+        flowing = self.is_on and str(data["flowing"]) == "1"
+        self._attr_effect = EFFECT_FLOW if flowing else EFFECT_OFF
+        self._attr_color_temp_kelvin = clamp_kelvin(num(data["ct"], MIN_KELVIN))
+        self._attr_rgb_color = to_rgb(data["rgb"])
+        mode = num(data["color_mode"], COLOR_MODE_CT)
+        if mode == 3 and data["hue"] not in (None, "") and data["sat"] not in (None, ""):
+            # Yeelight reports HSV as mode 3 and the rgb field can refer to an older color.
+            self._attr_rgb_color = tuple(
+                round(channel * 255)
+                for channel in hsv_to_rgb(num(data["hue"]) / 360, num(data["sat"]) / 100, 1)
+            )
+        if flowing:
+            self._attr_color_mode = ColorMode.ONOFF
+        else:
+            self._attr_color_mode = ColorMode.COLOR_TEMP if mode == COLOR_MODE_CT else ColorMode.RGB
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        smooth = fade(kwargs, self._default_ms)
+        effect = kwargs.get(ATTR_EFFECT)
+        percent = to_percent(kwargs[ATTR_BRIGHTNESS]) if ATTR_BRIGHTNESS in kwargs else None
+        if effect == EFFECT_FLOW:
+            level = percent or to_percent(self.brightness or 255)
+            expression = ",".join(f"{FLOW_STEP_MS},1,{color},{level}" for color in FLOW_COLORS)
+            await self.coordinator.async_send([("set_scene", ["cf", 0, 0, expression])])
+            return
+
+        mode = color_power_mode(kwargs)
+        commands = []
+        if not self.is_on:
+            commands.append(("set_power", ["on", *smooth] + ([mode] if mode else [])))
+        if ATTR_RGB_COLOR in kwargs:
+            commands.append(("set_rgb", [from_rgb(kwargs[ATTR_RGB_COLOR]), *smooth]))
+        elif ATTR_COLOR_TEMP_KELVIN in kwargs:
+            commands.append(("set_ct_abx", [clamp_kelvin(kwargs[ATTR_COLOR_TEMP_KELVIN]), *smooth]))
+        elif effect == EFFECT_OFF and self.effect == EFFECT_FLOW:
+            commands.append(("stop_cf", []))
+        if percent is not None:
+            commands.append(("set_bright", [percent, *smooth]))
+        if commands:
+            await self.coordinator.async_send(commands)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_send([("set_power", ["off", *fade(kwargs, self._default_ms)])])
+
+
+class MonobLight(GU10Light):
+    """Fixed-white GU10 controlled with the MIoT light service."""
+
+    _attr_supported_color_modes = {ColorMode.BRIGHTNESS}
+    _attr_color_mode = ColorMode.BRIGHTNESS
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        if ATTR_BRIGHTNESS in kwargs:
+            await self.coordinator.async_set_monob(power=True, bright=to_percent(kwargs[ATTR_BRIGHTNESS]))
+        else:
+            await self.coordinator.async_set_monob(power=True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_monob(power=False)
 
 
 class AmbientLight(ArwenLight):

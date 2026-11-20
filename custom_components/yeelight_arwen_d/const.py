@@ -5,9 +5,16 @@ from datetime import timedelta
 DOMAIN = "yeelight_arwen_d"
 MODEL_ARWEN_D = "yeelink.light.ceil43"
 MODEL_CEILING3 = "yeelink.light.ceiling3"
-SUPPORTED_MODELS = (MODEL_ARWEN_D, MODEL_CEILING3)
-# Device name per model.
-MODEL_NAMES = {MODEL_ARWEN_D: "Yeelight Arwen D", MODEL_CEILING3: "Yeelight Ceiling3"}
+MODEL_COLORC = "yeelink.light.colorc"
+MODEL_MONOB = "yeelink.light.monob"
+GU10_MODELS = (MODEL_COLORC, MODEL_MONOB)
+MODEL_NAMES = {
+    MODEL_ARWEN_D: "Yeelight Arwen D",
+    MODEL_CEILING3: "Yeelight Ceiling3",
+    MODEL_COLORC: "Yeelight GU10 W1 Multicolor",
+    MODEL_MONOB: "Yeelight GU10 W1 Dimmable",
+}
+SUPPORTED_MODELS = tuple(MODEL_NAMES)
 SCAN_INTERVAL = timedelta(seconds=3)
 # Poll interval while the lamp pushes its state changes over the Yeelight LAN protocol.
 PUSH_SCAN_INTERVAL = timedelta(seconds=60)
@@ -28,6 +35,11 @@ PROPS = (
 )
 # Properties of the ceiling3: white light and night light only. active_mode is 1 in night light.
 PROPS_CEILING3 = ("power", "bright", "ct", "nl_br", "active_mode", "trans_interval_dflt")
+
+GU10_SETTINGS_PROPS = ("save_state", "init_power_opt")
+PROPS_COLORC = ("power", "bright", "ct", "rgb", "color_mode", "flowing", "hue", "sat", *GU10_SETTINGS_PROPS)
+MONOB_LIGHT_SIID = 2
+MONOB_PROPERTIES = {"power": 1, "bright": 3, "off_delay": 7}
 
 # On/off settings of the Mi Home app: key -> (property read with get_prop, name written with set_ps, entity name).
 SWITCH_SETTINGS = {
@@ -50,6 +62,10 @@ MIN_KELVIN = 2700
 MAX_KELVIN = 6500
 
 EFFECT_NIGHT_LIGHT = "Night light"
+EFFECT_FLOW = "Flow"
+# The default palette and duration used by the Mi Home plugin for colorc's Flow tab.
+FLOW_COLORS = (0xFF2B00, 0xD5FF00, 0x00FFA9, 0x8000FF)
+FLOW_STEP_MS = 1000
 
 # Effects of the addressable main light: name -> set_fx parameters (from Mi Home plugin v13).
 EFFECTS = {
