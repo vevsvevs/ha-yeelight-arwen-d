@@ -9,7 +9,7 @@ from homeassistant.helpers import intent
 
 from .effect_intent import ASSIST, INTENT_EFFECT, EffectIntent
 
-RU_TARGET = "(для (комнаты|зоны|помещения) {area}|(на|для|у) {name}|(в|во|по) {area})"
+RU_TARGET = "(для (комнаты|зоны|помещения) {area}|(на|для) {name}|у {after_u}|(в|во|по) {area})"
 START = [
     f"(включи|запусти|установи|поставь|активируй|переключи на) (эффект|режим) {{effect}} {RU_TARGET}",
     f"(включите|запустите|установите|поставьте|активируйте) (эффект|режим) {{effect}} {RU_TARGET}",
@@ -24,7 +24,15 @@ STOP = [
     "(deaktiviere|stoppe) [den] Effekt (auf|für) {name}",
 ]
 LIST = [
-    f"(какие эффекты [есть|доступны]|[покажи|назови] список эффектов|(покажи|назови) доступные эффекты) {RU_TARGET}",
+    # Keep the truncated STT form "как" scoped to questions about effects.
+    f"(какие|как) (эффекты|режимы) (есть|доступны|бывают) {RU_TARGET}",
+    f"какие (есть|доступны|бывают) (эффекты|режимы) {RU_TARGET}",
+    f"какие (эффекты|режимы) {RU_TARGET} (есть|доступны)",
+    f"какие (эффекты|режимы) {RU_TARGET}",
+    f"какой (эффект|режим) [есть|доступен] {RU_TARGET}",
+    f"что за (эффекты|режимы) [есть|доступны] {RU_TARGET}",
+    f"[покажи|покажите|назови|назовите] список (эффектов|режимов) {RU_TARGET}",
+    f"(покажи|покажите|назови|назовите|перечисли|перечислите) [доступные] (эффекты|режимы) {RU_TARGET}",
     "(list effects|what effects are available) (on|for) [the] {name}",
     "(welche Effekte gibt es|liste Effekte) (auf|für) {name}",
 ]
@@ -41,6 +49,9 @@ def async_setup_assist(hass: HomeAssistant) -> None:
     def register(sentences: list[str], fixed_effect: str | None = None) -> None:
         async def handle(user_input: ConversationInput, result: RecognizeResult) -> str:
             slots = {name: {"value": item.value} for name, item in result.entities.items()}
+            if "after_u" in slots:
+                # In "у входа", у may also be part of the registered name.
+                slots["name"] = {"value": "у " + slots.pop("after_u")["value"]}
             if fixed_effect:
                 slots["effect"] = {"value": fixed_effect}
             response = await intent.async_handle(

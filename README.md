@@ -94,6 +94,8 @@ pipeline language and the light name or an alias. Russian commands also
 recognize common inflected forms of names, areas, and effect names.
 You can say «на лампе», «для лампы», or «у лампы» before the light's name.
 «Светильник» works the same way, and either word can be omitted.
+For a light named «У входа», try «Какие эффекты есть на светильнике У входа?»
+or «Перечисли эффекты для лампы У входа».
 
 | Action | Russian example | English example |
 |---|---|---|

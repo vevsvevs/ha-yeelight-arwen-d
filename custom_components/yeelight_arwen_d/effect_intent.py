@@ -110,8 +110,10 @@ def match_lights(
         )
         return match.states if match.is_match and len(match.areas) == 1 else []
 
-    stripped_name = RUSSIAN_LIGHT_PREFIX.sub("", name.casefold()) if russian else name
-    for candidate_name in dict.fromkeys((name, stripped_name)):
+    # Try the complete name first, including a leading "у" (e.g. "У входа").
+    spoken_name = name.casefold().removeprefix("у ") if russian else name
+    stripped_name = RUSSIAN_LIGHT_PREFIX.sub("", spoken_name) if russian else name
+    for candidate_name in dict.fromkeys((name, spoken_name, stripped_name)):
         match = intent.async_match_targets(
             hass, intent.MatchTargetsConstraints(name=candidate_name, assistant=assistant, single_target=True),
             states=targets,
@@ -124,15 +126,20 @@ def match_lights(
         return []
 
     registry = er.async_get(hass)
-    spoken = russian_form(stripped_name)
-    matches = []
+    label_forms = {}
     for state in targets:
         entry = registry.async_get(state.entity_id)
         labels = (state.name, entry.name or "", *entry.aliases)
-        if any(russian_form(label) == spoken for label in labels if isinstance(label, str) and label):
-            matches.append(state)
-    exposed = [state for state in matches if async_should_expose(hass, assistant, state.entity_id)]
-    return exposed if len(exposed) == 1 else []
+        label_forms[state.entity_id] = {
+            russian_form(label) for label in labels if isinstance(label, str) and label
+        }
+    for candidate in dict.fromkeys((name, spoken_name, stripped_name)):
+        spoken = russian_form(candidate)
+        matches = [state for state in targets if spoken in label_forms[state.entity_id]]
+        if matches:
+            exposed = [state for state in matches if async_should_expose(hass, assistant, state.entity_id)]
+            return exposed if len(exposed) == 1 else []
+    return []
 
 
 class EffectIntent(intent.IntentHandler):
