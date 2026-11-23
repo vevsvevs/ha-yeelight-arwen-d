@@ -31,6 +31,11 @@ RUSSIAN_EFFECT_ALIASES = {
     "цветовой переход": "Flow",
     "плавная смена цвета": "Flow",
     "ночной режим": "Night light",
+    "мерцание": "Glittering",
+    "морская глубина": "Deep Sea",
+    "растущая луна": "Waxing Moon",
+    "зелёные холмы": "Green Hills",
+    "фантазия": "Fantasy",
 }
 RUSSIAN_WORDS = re.compile(r"[\w]+")
 RUSSIAN_LIGHT_PREFIX = re.compile(

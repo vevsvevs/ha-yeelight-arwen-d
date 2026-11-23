@@ -49,22 +49,22 @@
             "state": {
               "off": "Выключен",
               "Night light": "Ночник",
-              "Glittering": "Мерцание",
+              "Glittering": "Блеск",
               "Pinball": "Пинбол",
-              "Deep Sea": "Морская глубина",
+              "Deep Sea": "Глубокое море",
               "Rainbow": "Радуга",
-              "Green Shade": "Зелёная тень",
+              "Green Shade": "Зеленая тень",
               "Ice Cream": "Мороженое",
-              "Waxing Moon": "Растущая луна",
-              "Green Hills": "Зелёные холмы",
-              "Bonfire": "Костёр",
+              "Waxing Moon": "Полнолуние",
+              "Green Hills": "Зеленые горы",
+              "Bonfire": "Костер",
               "Party": "Вечеринка",
               "Garden": "Сад",
               "Winter": "Зима",
               "Heartbeat": "Сердцебиение",
               "Christmas": "Рождество",
               "Sunset": "Закат",
-              "Fantasy": "Фантазия"
+              "Fantasy": "Мир грез"
             }
           }
         }

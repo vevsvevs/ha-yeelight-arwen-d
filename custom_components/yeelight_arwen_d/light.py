@@ -336,7 +336,9 @@ class ColorcLight(GU10Light):
         elif ATTR_COLOR_TEMP_KELVIN in kwargs:
             commands.append(("set_ct_abx", [clamp_kelvin(kwargs[ATTR_COLOR_TEMP_KELVIN]), *smooth]))
         elif effect == EFFECT_OFF and self.effect == EFFECT_FLOW:
-            commands.append(("stop_cf", []))
+            # Setting the white temperature also exits Flow.
+            kelvin = self.color_temp_kelvin or MIN_KELVIN
+            commands.append(("set_ct_abx", [kelvin, *smooth]))
         if percent is not None:
             commands.append(("set_bright", [percent, *smooth]))
         if commands:
