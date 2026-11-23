@@ -3,13 +3,29 @@
 from homeassistant.components.conversation import async_get_agent
 from homeassistant.components.conversation.agent_manager import get_agent_manager
 from homeassistant.components.conversation.models import ConversationInput
+from homeassistant.components.homeassistant import async_should_expose
 from homeassistant.core import HomeAssistant, callback
 from hassil.recognize import RecognizeResult
 from homeassistant.helpers import device_registry as dr, entity_registry as er, intent
 
-from .effect_intent import ASSIST, INTENT_EFFECT, EffectIntent
+from .effect_intent import (
+    ASSIST,
+    INTENT_EFFECT,
+    RUSSIAN_AREA_PREFIX,
+    RUSSIAN_LIGHT_PREFIX,
+    SPEECH,
+    EffectIntent,
+    find_target_areas,
+    russian_form,
+)
 
-RU_TARGET = "(для (комнаты|зоны|помещения) {area}|(на|для|у) {name}|(в|во|по) {area})"
+RU_PREPOSITIONS = {
+    "на": "on", "для": "for", "у": "by", "в": "in", "во": "inside", "по": "across",
+}
+RU_AREA_PREPOSITIONS = {"в", "во", "по"}
+RU_TARGET = "(" + "|".join(
+    f"{word} {{target_{slot}}}" for word, slot in RU_PREPOSITIONS.items()
+) + ")"
 RU_START = "(включи|запусти|установи|поставь|активируй|переключи на)"
 RU_START_POLITE = "(включите|запустите|установите|поставьте|активируйте)"
 RU_STOP = "(выключи|отключи|останови|убери|выключите|отключите|остановите|уберите) [текущий]"
@@ -31,6 +47,50 @@ LIST = [
     "(list effects|what effects are available) (on|for) [the] {name}",
     "(welche Effekte gibt es|liste Effekte) (auf|für) {name}",
 ]
+
+
+def resolve_russian_target(
+    hass: HomeAssistant, preposition: str, target: str,
+) -> tuple[str, str] | str:
+    """Check the literal light name and the grammatical reading of a spoken target."""
+    target = target.strip()
+    light_marker = RUSSIAN_LIGHT_PREFIX.match(target.casefold())
+    area_marker = RUSSIAN_AREA_PREFIX.match(target.casefold())
+    area_preposition = preposition in RU_AREA_PREPOSITIONS
+    area_name = target[area_marker.end():] if area_marker else target if area_preposition else ""
+    if light_marker:
+        light_names = (target[light_marker.end():],)
+    elif area_marker:
+        light_names = ()
+    elif area_preposition:
+        light_names = (f"{preposition} {target}",)
+    else:
+        light_names = (target, f"{preposition} {target}")
+
+    areas = find_target_areas(hass, area_name, russian=True) if area_name and not light_marker else []
+    wanted_names = {russian_form(name) for name in light_names}
+    lights = []
+    if wanted_names:
+        registry = er.async_get(hass)
+        get_aliases = getattr(intent, "async_get_entity_aliases", None)
+        for state in hass.states.async_all("light"):
+            if not async_should_expose(hass, ASSIST, state.entity_id):
+                continue
+            entry = registry.async_get(state.entity_id)
+            if get_aliases:
+                labels = get_aliases(hass, entry, state=state)
+            else:
+                labels = [state.name, entry.name, *entry.aliases] if entry else [state.name]
+            if any(russian_form(label) in wanted_names for label in (state.entity_id, *labels) if label):
+                lights.append(state.entity_id)
+
+    if len(lights) + len(areas) > 1:
+        return "Подходит несколько целей. Уточните комнату или полное имя светильника."
+    if lights:
+        return "name", lights[0]
+    if areas:
+        return "area", areas[0].id
+    return SPEECH["ru"]["area" if area_name and not light_marker else "target"]
 
 
 def source_area_id(hass: HomeAssistant, user_input: ConversationInput) -> str | None:
@@ -60,6 +120,14 @@ def async_setup_assist(hass: HomeAssistant) -> None:
     def register(sentences: list[str], fixed_effect: str | None = None) -> None:
         async def handle(user_input: ConversationInput, result: RecognizeResult) -> str:
             slots = {name: {"value": item.value} for name, item in result.entities.items()}
+            for word, slot in RU_PREPOSITIONS.items():
+                if spoken_target := slots.pop(f"target_{slot}", None):
+                    resolved = resolve_russian_target(hass, word, spoken_target["value"])
+                    if isinstance(resolved, str):
+                        return resolved
+                    key, value = resolved
+                    slots[key] = {"value": value}
+                    break
             if "name" not in slots and "area" not in slots:
                 if not (area_id := source_area_id(hass, user_input)):
                     return "Назовите комнату или светильник."

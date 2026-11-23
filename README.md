@@ -110,6 +110,11 @@ From a voice satellite assigned to an area, «Включи эффект Блес
 «Выключи эффект» use that area. Assist asks for a room or light name when
 the voice command has no source area.
 
+A preposition can also be part of a light name. «Включи эффект Блеск у входа»
+can address a light named «У входа» or «Вход». If both match, Assist asks for
+clarification before changing the lights. Use «на лампе У входа» to specify the
+full light name. Use «в комнате Гостиная» to explicitly target an area.
+
 Use the effects listed for the target light. Arwen D offers its main-light
 effects, GU10 Multicolor offers Flow, and Ceiling3 offers Night light. Stopping
 an effect returns the ceiling lights to regular white light. On GU10 Multicolor
