@@ -82,26 +82,40 @@ temperature. The published MIoT specification exposes only Color and Ct modes.
 The app fetches its recommended scenes and saved favorites from Xiaomi's
 servers, so those menus are outside the local device integration.
 
-Expose the primary `light` entity to Assist for standard light commands.
-To start Flow by voice with the built-in conversation agent, add an automation
-with a [sentence trigger](https://www.home-assistant.io/integrations/conversation/#configuration)
-and call the light service with the effect. Replace the entity ID with your
-bulb's ID.
-
-```yaml
-triggers:
-  - trigger: conversation
-    command: "start color flow"
-actions:
-  - action: light.turn_on
-    target:
-      entity_id: light.yeelight_gu10_w1_multicolor
-    data:
-      effect: Flow
-```
-
 GU10 commands and Home Assistant entities were checked against simulated miIO
 responses. Testing on physical GU10 W1 hardware is pending.
+
+## Voice control of effects
+
+Expose the primary `light` entity to Assist and give it a distinct name or
+alias. The integration registers phrases for the built-in conversation agent
+in Russian, English, and German. No configuration files are needed. Use the
+pipeline language and the light name or an alias. Russian commands also
+recognize common inflected forms of names, areas, and effect names.
+You can say «на лампе», «для лампы», or «у лампы» before the light's name.
+«Светильник» works the same way, and either word can be omitted.
+
+| Action | Russian example | English example |
+|---|---|---|
+| Start | Включи эффект радугу на светильнике Люстра | Start effect Rainbow on chandelier |
+| Stop | Выключи эффект у люстры | Stop effect on chandelier |
+| List | Какие эффекты доступны у лампы Спот | List effects on chandelier |
+
+For Russian room commands, assign the devices to a Home Assistant area.
+Say «Включи эффект волны в гостиной» to start Flow on every exposed light in
+the area that supports it. «Какие эффекты есть в гостиной?» lists the combined
+effects without duplicates, and «Выключи эффекты в гостиной» stops active
+effects there. Area names and their aliases are matched locally.
+
+Use the effects listed for the target light. Arwen D offers its main-light
+effects, GU10 Multicolor offers Flow, and Ceiling3 offers Night light. Stopping
+an effect returns the ceiling lights to regular white light. On GU10 Multicolor
+it stops Flow and lets the bulb restore its static lighting. An already-off
+lamp stays off.
+
+LLM conversation agents can also call the Yeelight effect tool when Home
+Assistant device control is enabled. The tool accepts either a light name or
+an area, plus an effect name, `off`, or `list`.
 
 ## Startup settings
 
