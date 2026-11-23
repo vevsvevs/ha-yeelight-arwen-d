@@ -6,10 +6,11 @@ import asyncio
 import logging
 import time
 from datetime import datetime, timedelta
+from functools import partial
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import CONF_HOST
+from homeassistant.const import CONF_HOST, CONF_TOKEN
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -35,9 +36,10 @@ from .const import (
     SCAN_INTERVAL,
     STARTUP_PROPS,
 )
-from .miio import MiioClient, MiioError, MiioTimeout, discover
+from .miio import MiioClient, MiioError, MiioInvalidReply, MiioTimeout, discover
 
 _LOGGER = logging.getLogger(__name__)
+READ_METHODS = {"get_prop", "get_properties", "miIO.info"}
 
 
 def monob_property(key: str) -> dict[str, Any]:
@@ -112,6 +114,11 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         except MiioTimeout:
             if not await self._async_rediscover() or method == "action":
                 raise
+        except MiioInvalidReply:
+            # A new device may already own the old address. Recover through a read, without
+            # replaying a write whose reply was unreadable.
+            if method not in READ_METHODS or not await self._async_rediscover():
+                raise
         return await self.hass.async_add_executor_job(self.client.send, method, params)
 
     async def async_refresh_info(self) -> None:
@@ -127,16 +134,34 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
             self.boot_time = boot.replace(microsecond=0)
 
     async def _async_rediscover(self) -> bool:
-        """Find the lamp by its device id; return True if it answered under a different IP."""
+        """Find and verify the same lamp before replacing its saved IP address."""
+        did = self.config_entry.data.get(CONF_DID)
+        if did is None:
+            return False
         if time.monotonic() - self._last_discovery < REDISCOVERY_INTERVAL:
             return False
         self._last_discovery = time.monotonic()
-        found = await self.hass.async_add_executor_job(discover)
-        host = found.get(self.config_entry.data.get(CONF_DID))
+        found = await self.hass.async_add_executor_job(partial(discover, target_did=did))
+        host = found.get(did)
         if host is None or host == self.client.host:
+            _LOGGER.debug("No new miIO address found for device %s", did)
+            return False
+        candidate = MiioClient(host, self.config_entry.data[CONF_TOKEN])
+        try:
+            info = await self.hass.async_add_executor_job(candidate.send, "miIO.info", [])
+        except MiioError as err:
+            _LOGGER.debug("Lamp at rediscovered address %s is not ready: %s", host, err)
+            return False
+        if (
+            candidate.did != did
+            or not isinstance(info, dict)
+            or not info.get("model")
+            or (self.info and info["model"] != self.model)
+        ):
+            _LOGGER.debug("Rediscovered address %s did not identify the configured lamp", host)
             return False
         _LOGGER.info("Lamp moved from %s to %s", self.client.host, host)
-        self.client.host = host
+        self.client = candidate
         self.hass.config_entries.async_update_entry(
             self.config_entry, data={**self.config_entry.data, CONF_HOST: host}
         )

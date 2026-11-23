@@ -21,7 +21,7 @@ PUSH_SCAN_INTERVAL = timedelta(seconds=60)
 # Yeelight LAN protocol port; only the ceiling3 offers it.
 LAN_PORT = 55443
 # Minimum seconds between two broadcast searches for a lamp that stopped answering.
-REDISCOVERY_INTERVAL = 60
+REDISCOVERY_INTERVAL = 15
 # Minimum seconds between two reads of miIO.info (Wi-Fi signal, uptime).
 INFO_INTERVAL = 60
 

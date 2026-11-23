@@ -187,7 +187,7 @@ Without a `transition` the lamp fades for its `Default transition`.
 No fixed IP address is needed. The setup dialog lists the lamps that answer a
 miIO broadcast (hello packet to UDP 54321) by IP address and device ID; an IP
 address can also be typed in. The device ID is stored with the entry. When the
-lamp stops answering, the integration broadcasts again (at most once a minute),
+lamp stops answering, the integration broadcasts again (at most once every 15 seconds),
 and if the lamp answers under a different IP address, that address is used and
 saved.
 
