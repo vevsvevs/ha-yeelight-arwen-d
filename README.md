@@ -90,13 +90,20 @@ responses. Testing on physical GU10 W1 hardware is pending.
 Expose the primary `light` entity to Assist and give it a distinct name or
 alias. The integration registers phrases for the built-in conversation agent
 in Russian, English, and German. No configuration files are needed. Use the
-pipeline language and the exact light name or an alias.
+pipeline language and the light name or an alias. Russian commands also
+recognize common inflected forms of names, areas, and effect names.
 
 | Action | Russian example | English example |
 |---|---|---|
-| Start | Включи эффект радуга на люстра | Start effect Rainbow on chandelier |
-| Stop | Выключи эффект на люстра | Stop effect on chandelier |
-| List | Какие эффекты доступны на люстра | List effects on chandelier |
+| Start | Включи эффект радугу на светильнике Люстра | Start effect Rainbow on chandelier |
+| Stop | Выключи эффект у люстры | Stop effect on chandelier |
+| List | Какие эффекты доступны для светильника Люстра | List effects on chandelier |
+
+For Russian room commands, assign the devices to a Home Assistant area.
+Say «Включи эффект волны в гостиной» to start Flow on every exposed light in
+the area that supports it. «Какие эффекты есть в гостиной?» lists the combined
+effects without duplicates, and «Выключи эффекты в гостиной» stops active
+effects there. Area names and their aliases are matched locally.
 
 Use the effects listed for the target light. Arwen D offers its main-light
 effects, GU10 Multicolor offers Flow, and Ceiling3 offers Night light. Stopping
@@ -105,8 +112,8 @@ it stops Flow and lets the bulb restore its static lighting. An already-off
 lamp stays off.
 
 LLM conversation agents can also call the Yeelight effect tool when Home
-Assistant device control is enabled. The tool accepts a light name or alias
-and an effect name, `off`, or `list`.
+Assistant device control is enabled. The tool accepts either a light name or
+an area, plus an effect name, `off`, or `list`.
 
 ## Startup settings
 

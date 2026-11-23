@@ -9,19 +9,22 @@ from homeassistant.helpers import intent
 
 from .effect_intent import ASSIST, INTENT_EFFECT, EffectIntent
 
+RU_TARGET = "(для (комнаты|зоны|помещения) {area}|(на|для|у) {name}|(в|во|по) {area})"
 START = [
-    "(включи|запусти|установи|поставь) эффект {effect} (на|для) {name}",
+    f"(включи|запусти|установи|поставь|активируй|переключи на) (эффект|режим) {{effect}} {RU_TARGET}",
+    f"(включите|запустите|установите|поставьте|активируйте) (эффект|режим) {{effect}} {RU_TARGET}",
+    f"(смени|поменяй|переключи) (эффект|режим) на {{effect}} {RU_TARGET}",
     "(turn on|start|set) [the] effect {effect} (on|for) [the] {name}",
     "(aktiviere|starte) [den] Effekt {effect} (auf|für) {name}",
 ]
 STOP = [
-    "(выключи|отключи|останови) эффект (на|для) {name}",
-    "верни обычный свет (на|для) {name}",
+    f"(выключи|отключи|останови|убери|выключите|отключите|остановите) [текущий] (эффект|эффекты|режим) {RU_TARGET}",
+    f"(верни|верните|включи) обычный (свет|режим) {RU_TARGET}",
     "(turn off|stop|disable) [the] effect (on|for) [the] {name}",
     "(deaktiviere|stoppe) [den] Effekt (auf|für) {name}",
 ]
 LIST = [
-    "(какие эффекты|список эффектов) [доступны] (на|для) {name}",
+    f"(какие эффекты [есть|доступны]|[покажи|назови] список эффектов|(покажи|назови) доступные эффекты) {RU_TARGET}",
     "(list effects|what effects are available) (on|for) [the] {name}",
     "(welche Effekte gibt es|liste Effekte) (auf|für) {name}",
 ]
