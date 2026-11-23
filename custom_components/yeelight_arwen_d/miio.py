@@ -6,6 +6,7 @@ import hashlib
 import itertools
 import json
 import socket
+import time
 from typing import Any
 
 from cryptography.hazmat.primitives import padding
@@ -23,19 +24,27 @@ class MiioTimeout(MiioError):
     """The device did not answer."""
 
 
-def discover(timeout: float = 3.0) -> dict[int, str]:
+class MiioInvalidReply(MiioError):
+    """The reply could not be decoded using the device token."""
+
+
+def discover(timeout: float = 3.0, *, target_did: int | None = None) -> dict[int, str]:
     """Broadcast a hello and return {device id: IP address} of every miIO device that answers."""
     found: dict[int, str] = {}
+    deadline = time.monotonic() + timeout
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        sock.settimeout(timeout)
         # Without a broadcast route (some Docker or VLAN setups) sendto fails; the result is then empty.
         try:
             sock.sendto(HELLO, ("255.255.255.255", PORT))
-            while True:
+            while (remaining := deadline - time.monotonic()) > 0:
+                sock.settimeout(remaining)
                 reply, (ip, _) = sock.recvfrom(1024)
                 if len(reply) >= 32 and reply[:2] == b"\x21\x31":
-                    found[int.from_bytes(reply[8:12], "big")] = ip
+                    did = int.from_bytes(reply[8:12], "big")
+                    found[did] = ip
+                    if did == target_did:
+                        break
         except OSError:
             pass
     return found
@@ -74,10 +83,12 @@ class MiioClient:
                     raise MiioTimeout(f"{method}: no reply from {self.host}") from err
         try:
             response = self._unpack(reply)
+            if not isinstance(response, dict):
+                raise ValueError("Expected an miIO response object")
         except ValueError as err:
             # Bad padding or JSON: truncated packet or wrong token.
             self._header = None
-            raise MiioError(f"{method}: unreadable reply from {self.host}") from err
+            raise MiioInvalidReply(f"{method}: unreadable reply from {self.host}") from err
         self._header = reply[8:16]
         if "error" in response:
             raise MiioError(f"{method}: {response['error']}")
