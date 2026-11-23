@@ -92,12 +92,14 @@ alias. The integration registers phrases for the built-in conversation agent
 in Russian, English, and German. No configuration files are needed. Use the
 pipeline language and the light name or an alias. Russian commands also
 recognize common inflected forms of names, areas, and effect names.
+You can say «на лампе», «для лампы», or «у лампы» before the light's name.
+«Светильник» works the same way, and either word can be omitted.
 
 | Action | Russian example | English example |
 |---|---|---|
 | Start | Включи эффект радугу на светильнике Люстра | Start effect Rainbow on chandelier |
 | Stop | Выключи эффект у люстры | Stop effect on chandelier |
-| List | Какие эффекты доступны для светильника Люстра | List effects on chandelier |
+| List | Какие эффекты доступны у лампы Спот | List effects on chandelier |
 
 For Russian room commands, assign the devices to a Home Assistant area.
 Say «Включи эффект волны в гостиной» to start Flow on every exposed light in
