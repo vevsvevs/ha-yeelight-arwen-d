@@ -39,10 +39,12 @@ RUSSIAN_EFFECT_ALIASES = {
 }
 RUSSIAN_WORDS = re.compile(r"[\w]+")
 RUSSIAN_LIGHT_PREFIX = re.compile(
-    r"^(?:светильник(?:а|е|ом|у)?|ламп(?:а|е|ы|у|ой)|"
-    r"лампочк(?:а|е|и|у|ой)|устройств(?:о|е|а|у|ом))\s+"
+    r"^(?:светильник(?:а|е|ом|у)?|ламп(?:а|е|ы|у|ой|ою)|"
+    r"лампочк(?:а|е|и|у|ой|ою)|устройств(?:о|е|а|у|ом))\s+"
 )
-RUSSIAN_AREA_PREFIX = re.compile(r"^(?:комнат(?:а|е|ы|у)|зон(?:а|е|ы|у)|помещени(?:е|и|я|ю))\s+")
+RUSSIAN_AREA_PREFIX = re.compile(
+    r"^(?:комнат(?:а|е|ы|у|ой|ою)|зон(?:а|е|ы|у|ой|ою)|помещени(?:е|и|я|ю|ем))\s+"
+)
 _RUSSIAN_STEMMER = stemmer("russian")
 
 
@@ -88,6 +90,19 @@ def effect_lights(hass: HomeAssistant) -> list[State]:
     ]
 
 
+def find_target_areas(hass: HomeAssistant, name: str, russian: bool) -> list[ar.AreaEntry]:
+    """Find named areas, allowing inflection in Russian."""
+    registry = ar.async_get(hass)
+    areas = list(intent.find_areas(name, registry))
+    if areas or not russian:
+        return areas
+    spoken = russian_form(RUSSIAN_AREA_PREFIX.sub("", name.casefold()))
+    return [
+        area for area in registry.async_list_areas()
+        if any(russian_form(label) == spoken for label in (area.name, *area.aliases))
+    ]
+
+
 def match_lights(
     hass: HomeAssistant, name: str, area: str, assistant: str, russian: bool,
 ) -> list[State]:
@@ -100,13 +115,8 @@ def match_lights(
 
     if area:
         registry = ar.async_get(hass)
-        areas = list(intent.find_areas(area, registry))
-        if not areas and russian:
-            spoken = russian_form(RUSSIAN_AREA_PREFIX.sub("", area.casefold()))
-            areas = [
-                candidate for candidate in registry.async_list_areas()
-                if any(russian_form(label) == spoken for label in (candidate.name, *candidate.aliases))
-            ]
+        exact_id = registry.async_get_area(area)
+        areas = [exact_id] if exact_id else find_target_areas(hass, area, russian)
         if len(areas) != 1:
             return []
         match = intent.async_match_targets(
