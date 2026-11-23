@@ -110,7 +110,7 @@ effects there. Area names and their aliases are matched locally.
 Use the effects listed for the target light. Arwen D offers its main-light
 effects, GU10 Multicolor offers Flow, and Ceiling3 offers Night light. Stopping
 an effect returns the ceiling lights to regular white light. On GU10 Multicolor
-it stops Flow and lets the bulb restore its static lighting. An already-off
+it stops Flow and switches to white at the bulb's reported color temperature. An already-off
 lamp stays off.
 
 LLM conversation agents can also call the Yeelight effect tool when Home
