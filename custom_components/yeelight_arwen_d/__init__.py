@@ -6,8 +6,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_TOKEN, Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers.typing import ConfigType
 
 from . import lan
+from .assist import async_setup_assist
 from .const import CONF_DID, DOMAIN, MODEL_CEILING3
 from .coordinator import ArwenCoordinator
 from .miio import MiioClient, MiioError
@@ -15,6 +17,12 @@ from .miio import MiioClient, MiioError
 PLATFORMS = [Platform.BUTTON, Platform.LIGHT, Platform.NUMBER, Platform.SELECT, Platform.SENSOR, Platform.SWITCH]
 
 type ArwenConfigEntry = ConfigEntry[ArwenCoordinator]
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Set up the shared Assist commands once for all lamps."""
+    async_setup_assist(hass)
+    return True
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ArwenConfigEntry) -> bool:

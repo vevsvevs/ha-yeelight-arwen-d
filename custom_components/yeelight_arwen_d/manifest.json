@@ -3,6 +3,7 @@
   "name": "Yeelight Arwen D",
   "codeowners": ["@mvoss96"],
   "config_flow": true,
+  "dependencies": ["conversation"],
   "documentation": "https://github.com/mvoss96/ha-yeelight-arwen-d",
   "integration_type": "device",
   "iot_class": "local_polling",
