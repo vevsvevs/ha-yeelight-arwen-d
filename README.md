@@ -106,6 +106,9 @@ Say «Включи эффект волны в гостиной» to start Flow o
 the area that supports it. «Какие эффекты есть в гостиной?» lists the combined
 effects without duplicates, and «Выключи эффекты в гостиной» stops active
 effects there. Area names and their aliases are matched locally.
+From a voice satellite assigned to an area, «Включи эффект Блеск» and
+«Выключи эффект» use that area. Assist asks for a room or light name when
+the voice command has no source area.
 
 Use the effects listed for the target light. Arwen D offers its main-light
 effects, GU10 Multicolor offers Flow, and Ceiling3 offers Night light. Stopping
