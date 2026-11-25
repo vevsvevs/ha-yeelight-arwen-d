@@ -17,6 +17,7 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    COLOR_MODE_FLOW,
     CONF_DID,
     DOMAIN,
     INFO_INTERVAL,
@@ -64,6 +65,7 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         # monotonic() starts near 0 at host boot, so 0.0 would block discovery for the first minute.
         self._last_discovery = -REDISCOVERY_INTERVAL
         self._last_info = 0.0
+        self._effect_brightness: str | None = None
 
     @property
     def model(self) -> str:
@@ -167,6 +169,31 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         )
         return True
 
+    def _normalize_effect_state(self, state: dict[str, str]) -> None:
+        """Keep the selected brightness while the device renders a color effect."""
+        if self.model == MODEL_COLORC:
+            effect_running = str(state["flowing"]) == "1"
+            if effect_running:
+                state["power"] = "on"
+        elif self.model == MODEL_ARWEN_D:
+            effect_running = state["main_power"] == "on" and str(state["color_mode"]) == str(COLOR_MODE_FLOW)
+        else:
+            return
+
+        if not effect_running:
+            self._effect_brightness = None
+            return
+
+        if self._effect_brightness is None:
+            previous = self.data.get("bright") if self.data else None
+            self._effect_brightness = next(
+                (str(value) for value in (previous, state["bright"])
+                 if str(value).isdecimal() and 1 <= int(value) <= 100),
+                None,
+            )
+        if self._effect_brightness is not None:
+            state["bright"] = self._effect_brightness
+
     async def _async_update_data(self) -> dict[str, str]:
         async with self._io_lock:
             return await self._async_read()
@@ -186,6 +213,7 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
                 state.update(await self._async_read_startup_settings((POWER_ON_PROPERTY,)))
             if self.model == MODEL_COLORC and state["power"] not in ("on", "off"):
                 raise MiioError("get_prop: missing GU10 power state")
+            self._normalize_effect_state(state)
             if self.model != MODEL_MONOB:
                 state.update(await self._async_read_timer(state[self.power_property] == "on"))
         except MiioError as err:
@@ -259,7 +287,9 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
             ("action", {"did": f"light-{aiid}", "siid": MONOB_LIGHT_SIID, "aiid": aiid, "in": []})
         ])
 
-    async def async_send(self, commands: list[tuple[str, Any]]) -> None:
+    async def async_send(
+        self, commands: list[tuple[str, Any]], *, flow_brightness: int | None = None,
+    ) -> None:
         """Send commands in order, then read the state; a failed command raises in the service call.
 
         The state is read before the action returns, so the next step of a knob turned quickly
@@ -269,8 +299,21 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
         try:
             async with self._io_lock:
                 for method, params in commands:
+                    if (
+                        method == "adjust_bright"
+                        and self.model == MODEL_ARWEN_D
+                        and self._effect_brightness is not None
+                    ):
+                        level = min(100, int(self._effect_brightness) + params[0])
+                        transition = ["smooth", params[1]] if params[1] > 0 else ["sudden", 0]
+                        method, params = (
+                            ("set_bright", [level, *transition]) if level > 0
+                            else ("set_power", ["off", *transition])
+                        )
                     _LOGGER.debug("%s %s", method, params)
                     result = await self.async_call(method, params)
+                    if self.model in (MODEL_ARWEN_D, MODEL_COLORC) and method == "set_bright":
+                        self._effect_brightness = str(params[0])
                     if method == "set_default" and result != ["ok"]:
                         raise MiioError(f"{method}: unexpected result {result}")
                     if method == "action":
@@ -286,6 +329,8 @@ class ArwenCoordinator(DataUpdateCoordinator[dict[str, str]]):
                             )
                         ):
                             raise MiioError(f"{method}: {result}")
+                if flow_brightness is not None:
+                    self._effect_brightness = str(flow_brightness)
         except MiioError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
