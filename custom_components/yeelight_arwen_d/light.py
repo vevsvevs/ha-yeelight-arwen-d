@@ -181,13 +181,16 @@ class MainLight(ArwenLight):
         self._attr_brightness = to_brightness(d["nl_br"] if night_light else d["bright"])
         self._attr_color_temp_kelvin = clamp_kelvin(num(d["ct"], MIN_KELVIN))
         self._attr_rgb_color = to_rgb(d["rgb"])
-        self._attr_color_mode = ColorMode.RGB if mode in (COLOR_MODE_RGB, COLOR_MODE_FLOW) else ColorMode.COLOR_TEMP
         if night_light:
             self._attr_effect = EFFECT_NIGHT_LIGHT
         elif mode == COLOR_MODE_FLOW:
             self._attr_effect = EFFECT_BY_INDEX.get(num(d["current_effect_index"]), EFFECT_OFF)
         else:
             self._attr_effect = EFFECT_OFF
+        if self._attr_effect in EFFECTS:
+            self._attr_color_mode = ColorMode.BRIGHTNESS
+        else:
+            self._attr_color_mode = ColorMode.RGB if mode == COLOR_MODE_RGB else ColorMode.COLOR_TEMP
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Turn on and apply color, brightness or effect with the requested fade."""
@@ -313,7 +316,7 @@ class ColorcLight(GU10Light):
                 for channel in hsv_to_rgb(num(data["hue"]) / 360, num(data["sat"]) / 100, 1)
             )
         if flowing:
-            self._attr_color_mode = ColorMode.ONOFF
+            self._attr_color_mode = ColorMode.BRIGHTNESS
         else:
             self._attr_color_mode = ColorMode.COLOR_TEMP if mode == COLOR_MODE_CT else ColorMode.RGB
 
@@ -324,7 +327,9 @@ class ColorcLight(GU10Light):
         if effect == EFFECT_FLOW:
             level = percent or to_percent(self.brightness or 255)
             expression = ",".join(f"{FLOW_STEP_MS},1,{color},{level}" for color in FLOW_COLORS)
-            await self.coordinator.async_send([("set_scene", ["cf", 0, 0, expression])])
+            await self.coordinator.async_send(
+                [("set_scene", ["cf", 0, 0, expression])], flow_brightness=level,
+            )
             return
 
         mode = color_power_mode(kwargs)
